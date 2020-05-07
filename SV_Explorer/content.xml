@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<content id="SV_Explorer" name="SV_Explorer" description="Explore system." author="SoloVova" version="131" date="2020-05-03" save="0" enabled="1">
+  <dependency version="300"/>
+</content>
+
+<!-- Russian ~~ Русский (language=7) translation by alexalsp -->
+<!-- French ~~ Français (language=33) translation by darkslimus / Xchange Guild -->
