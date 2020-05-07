@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Portuguese (Brazil) ~~ Português (Brasil) -->
+<language>
+  <page id="8888888" voice="no">
+    <!-- JP_CollectPlaceables -->
+    <t id="131">Adicionar Pedido?</t>
+    <t id="132">Sectores Inimigos?</t>
+    <t id="133">Recolher Minas?</t>
+    <t id="134">Recolher Satélites?</t>
+    <t id="135">Recolher Farol de Navegação?</t>
+    <t id="136">Recolher Sondas de Recursos?</t>
+    <t id="137">Recolher Torres Laser?</t>
+    <t id="138">Recolha Instantânea?</t>
+  </page>
+</language>
+<!-- Thanks ~ InRyzen -->

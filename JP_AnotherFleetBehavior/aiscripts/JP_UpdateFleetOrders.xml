@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<aiscript name="JP_UpdateFleetOrders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="1">
+
+  <order id="JP_UpdateFleetOrders" name="UpdateFleetOrders JP" category="internal" infinite="false">
+    <params>
+      <!-- PARAMS -->
+      <param name="ATTACKER_PRIMARY_TARGED" text="AttackerPrimaryTarged" type="object" default="null"/>
+      <param name="ATTACKER_RANGE" text="AttackerRange" type="length" default="this.ship.maxradarrange">
+        <input_param name="step" value="1km"/>
+        <input_param name="min" value="1km"/>
+        <input_param name="max" value="this.ship.maxradarrange * 2"/>
+        <editable/>
+      </param>
+      <param name="DEFENDER_RANGE" text="DefenderRange" type="length" default="this.ship.maxradarrange / 2">
+        <input_param name="step" value="1km"/>
+        <input_param name="min" value="1km"/>
+        <input_param name="max" value="this.ship.maxradarrange"/>
+        <editable/>
+      </param>
+      <param name="INTERCEPTOR_RANGE" text="InterceptorRange" type="length" default="this.ship.maxradarrange">
+        <input_param name="step" value="1km"/>
+        <input_param name="min" value="1km"/>
+        <input_param name="max" value="this.ship.maxradarrange"/>
+        <editable/>
+      </param>
+      <param name="ALLOW_SHIPS_GO_TO_REPAIR" text="AllowShipsGoToRepair" type="bool" default="true"/>
+      <param name="COMBAT_REPAIR_HULL_THRESHOLD" text="CombatRepairHullThreshold" type="number" default="90">
+        <input_param name="step" value="1"/>
+        <input_param name="min" value="1"/>
+        <input_param name="max" value="100"/>
+      </param>
+      <param name="RESUPPLY_SHIP" text="ResupplyShip" type="object" default="null"/>
+      <!-- DEBUG -->
+      <param name="DEBUG" text="Debug" type="number" default="0.0" advanced="1">
+        <input_param name="step" value="0.1"/>
+        <input_param name="min" value="0.0"/>
+        <input_param name="max" value="1.0"/>
+      </param>
+    </params>
+    <skill min="0"/>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+  </order>
+
+  <interrupts>
+    <handler ref="ScannedHandler"/>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="TargetInvalidHandler"/>
+    <handler ref="AttackHandler"/>
+    <handler ref="MissileLockHandler"/>
+    <handler ref="ScannedHandler"/>
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="ResupplyHandler"/>
+    <handler ref="JobRemoveRequestHandler"/>
+  </interrupts>
+
+  <init>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <set_value name="$DebugDirectory" exact="'JP_AnotherFleetBehavior.logs'"/>
+    <set_value name="$DebugFileName" exact="'JP_UpdateFleetOrders.log'"/>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <set_value name="$FleetCommander" exact="this.assignedcontrolled"/>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  </init>
+
+  <attention min="unknown">
+    <actions>
+      <wait exact="1ms"/>
+      <label name="INIT"/>
+
+      <do_if value="$DEBUG gt 0.0">
+        <debug_to_file append="false" directory="$DebugDirectory" name="$DebugFileName" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'"/>
+        <debug_to_file directory="$DebugDirectory" name="$DebugFileName" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_AnotherFleetBehavior ~ JP_UpdateFleetOrders ~~' + '\n'"/>
+      </do_if>
+
+      <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+      <!-- Check if $ATTACKER_PRIMARY_TARGED is valid and is in range -->
+      <set_value name="$SendAttacker" exact="false"/>
+      <do_if value="@$ATTACKER_PRIMARY_TARGED != null">
+        <check_object object="$ATTACKER_PRIMARY_TARGED" result="$Good">
+          <match checkoperational="true"/>
+        </check_object>
+        <do_if value="$Good and ($ATTACKER_PRIMARY_TARGED.distanceto.{$FleetCommander} lt $ATTACKER_RANGE)">
+          <set_value name="$SendAttacker" exact="true"/>
+        </do_if>
+        <remove_value name="$Good"/>
+      </do_if>
+
+      <!-- Send small Defender? ~ Are there small enemies near us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$ATTACKER_RANGE"/>
+        <param name="CLASSES" value="[class.ship_s, class.ship_m]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="false"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundSmallEnemyCount"/>
+      </run_script>
+      <set_value name="$SendAttackerSmall" exact="$FoundSmallEnemyCount or $SendAttacker"/>
+
+      <!-- Send large Defender? ~ Are there large enemies near us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$ATTACKER_RANGE"/>
+        <param name="CLASSES" value="[class.ship_l, class.ship_xl]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="false"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundLargeEnemyCount"/>
+      </run_script>
+      <set_value name="$SendAttackerLarge" exact="$FoundLargeEnemyCount or $SendAttacker"/>
+      <remove_value name="$SendAttacker"/>
+
+      <!-- Send small Defender? ~ Are there small enemies near us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$DEFENDER_RANGE"/>
+        <param name="CLASSES" value="[class.ship_s, class.ship_m]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="false"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundSmallEnemyCount"/>
+      </run_script>
+      <set_value name="$SendDefenderSmall" exact="$FoundSmallEnemyCount"/>
+
+      <!-- Send large Defender? ~ Are there large enemies near us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$DEFENDER_RANGE"/>
+        <param name="CLASSES" value="[class.ship_l, class.ship_xl]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="false"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundLargeEnemyCount"/>
+      </run_script>
+      <set_value name="$SendDefenderLarge" exact="$FoundLargeEnemyCount"/>
+
+      <!-- Send small Interceptors? ~ Are there small enemies near us and are they attacking us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$INTERCEPTOR_RANGE"/>
+        <param name="CLASSES" value="[class.ship_s, class.ship_m]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="true"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundSmallEnemyCount"/>
+      </run_script>
+      <set_value name="$SendInterceptorSmall" exact="$FoundSmallEnemyCount"/>
+
+      <!-- Send large Interceptors? ~ Are there large enemies near us and are they attacking us? -->
+      <run_script name="'JP_GetEnemyInRange'">
+        <param name="RANGE" value="$INTERCEPTOR_RANGE"/>
+        <param name="CLASSES" value="[class.ship_l, class.ship_xl]"/>
+        <param name="SECTOR" value="$FleetCommander.sector"/>
+        <param name="CENTER_POSITION" value="$FleetCommander.position"/>
+        <param name="SORT_TO_POSITION" value="$FleetCommander"/>
+        <param name="RANDOMIZING" value="11"/>
+        <param name="CHECK_FOR_IS_ATTACKING_US" value="true"/>
+        <param name="DEBUG" value="$DEBUG"/>
+        <save_retval name="FOUND_ENEMY_COUNT" variable="$FoundLargeEnemyCount"/>
+      </run_script>
+      <set_value name="$SendInterceptorLarge" exact="$FoundLargeEnemyCount"/>
+
+      <remove_value name="$FoundSmallEnemyCount"/>
+      <remove_value name="$FoundLargeEnemyCount"/>
+
+      <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+      <do_for_each name="$Subordinate" in="$FleetCommander.subordinates">
+
+        <run_script name="'JP_HasShipOrder'">
+          <param name="SHIP" value="$Subordinate"/>
+          <param name="ORDER" value="'Repair'"/>
+          <param name="DEBUG" value="$DEBUG"/>
+          <save_retval name="HAS_ORDER" variable="$HasRepairOrder"/>
+        </run_script>
+        <do_if value="$HasRepairOrder or $Subordinate.isunit">
+          <continue/>
+        </do_if>
+
+        <!-- Check for damage and if $Subordinate has already an repair order, if not create one -->
+        <do_if value="($Subordinate.hullpercentage lt $COMBAT_REPAIR_HULL_THRESHOLD) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_s or $Subordinate.class == ship_m and $Subordinate.assignment == assignment.attack and not $SendAttackerSmall) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_s or $Subordinate.class == ship_m and $Subordinate.assignment == assignment.defence and not $SendDefenderSmall) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_s or $Subordinate.class == ship_m and $Subordinate.assignment == assignment.interception and not $SendInterceptorSmall) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_l or $Subordinate.class == ship_xl and $Subordinate.assignment == assignment.attack and not $SendAttackerLarge) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_l or $Subordinate.class == ship_xl and $Subordinate.assignment == assignment.defence and not $SendDefenderLarge) or
+                      ($Subordinate.hullpercentage lt 100 and $Subordinate.class == class.ship_l or $Subordinate.class == ship_xl and $Subordinate.assignment == assignment.interception and not $SendInterceptorLarge)">
+          <do_if value="$Subordinate.class" list="[class.ship_s, class.ship_m]">
+            <cancel_all_orders object="$Subordinate"/>
+            <create_order object="$Subordinate" id="'Repair'" immediate="true">
+              <param name="destination" value="$FleetCommander"/>
+              <param name="hullpercent" value="100"/>
+              <param name="repairall" value="true"/>
+            </create_order>
+            <continue/>
+          </do_if>
+          <do_elseif value="$Subordinate.class" list="[class.ship_l, class.ship_xl]">
+            <do_if value="@$RESUPPLY_SHIP != null">
+              <cancel_all_orders object="$Subordinate"/>
+              <create_order object="$Subordinate" id="'Repair'" immediate="true">
+                <param name="destination" value="$RESUPPLY_SHIP"/>
+                <param name="hullpercent" value="100"/>
+                <param name="repairall" value="true"/>
+              </create_order>
+              <continue/>
+            </do_if>
+          </do_elseif>
+        </do_if>
+
+        <do_if value="$Subordinate.type == shiptype.resupplier or $Subordinate.type == shiptype.carrier">
+          <continue/>
+        </do_if>
+
+        <!-- Attacker ~~ send attackers if TARGED is in ATTACKER_RANGE -->
+        <do_if value="$Subordinate.assignment == assignment.attack and not $Subordinate.subordinategroupdockoverride and
+                      (($Subordinate.class == class.ship_s or $Subordinate.class == class.ship_m) and $SendAttackerSmall) or
+                      (($Subordinate.class == class.ship_l or $Subordinate.class == class.ship_xl) and $SendAttackerLarge)">
+          <do_if value="$Subordinate.defaultorder.id != 'JP_Go_Attack'">
+            <cancel_all_orders object="$Subordinate"/>
+            <create_order object="$Subordinate" id="'JP_Go_Attack'" default="true">
+              <param name="ATTACKER_RANGE" value="$ATTACKER_RANGE"/>
+              <param name="ATTACKER_TARGED" value="$ATTACKER_PRIMARY_TARGED"/>
+              <param name="DEBUG" value="$DEBUG"/>
+            </create_order>
+          </do_if>
+          <continue/>
+        </do_if>
+
+        <!-- Defender ~~ send defenders if a enemy is in DEFENDER_RANGE -->
+        <do_if value="$Subordinate.assignment == assignment.defence and not $Subordinate.subordinategroupdockoverride and
+                      (($Subordinate.class == class.ship_s or $Subordinate.class == class.ship_m) and $SendDefenderSmall) or
+                      (($Subordinate.class == class.ship_l or $Subordinate.class == class.ship_xl) and $SendDefenderLarge)">
+          <do_if value="$Subordinate.defaultorder.id != 'JP_Go_Defend'">
+            <cancel_all_orders object="$Subordinate"/>
+            <create_order object="$Subordinate" id="'JP_Go_Defend'" default="true">
+              <param name="DEFENDER_RANGE" value="$DEFENDER_RANGE"/>
+              <param name="DEBUG" value="$DEBUG"/>
+            </create_order>
+          </do_if>
+          <continue/>
+        </do_if>
+
+        <!-- Intercepter ~~ send interceptors if a enemy is in INTERCEPTOR_RANGE and is attacking one of our ships -->
+        <do_if value="$Subordinate.assignment == assignment.interception and not $Subordinate.subordinategroupdockoverride and
+                      (($Subordinate.class == class.ship_s or $Subordinate.class == class.ship_m) and $SendInterceptorSmall) or 
+                      (($Subordinate.class == class.ship_l or $Subordinate.class == class.ship_xl) and $SendInterceptorLarge)">
+          <do_if value="$Subordinate.defaultorder.id != 'JP_Go_Intercept'">
+            <cancel_all_orders object="$Subordinate"/>
+            <create_order object="$Subordinate" id="'JP_Go_Intercept'" default="true">
+              <param name="INTERCEPTOR_RANGE" value="$INTERCEPTOR_RANGE"/>
+              <param name="DEBUG" value="$DEBUG"/>
+            </create_order>
+          </do_if>
+          <continue/>
+        </do_if>
+
+      </do_for_each>
+
+      <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+      <do_if value="$DEBUG gt 0.0">
+        <debug_to_file directory="$DebugDirectory" name="$DebugFileName" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_AnotherFleetBehavior ~ JP_UpdateFleetOrders ~~'"/>
+        <debug_to_file directory="$DebugDirectory" name="$DebugFileName" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'"/>
+      </do_if>
+
+      <label name="CLEANUP"/>
+      <remove_value name="$SendAttackerSmall"/>
+      <remove_value name="$SendAttackerLarge"/>
+      <remove_value name="$SendDefenderSmall"/>
+      <remove_value name="$SendDefenderLarge"/>
+      <remove_value name="$SendInterceptorSmall"/>
+      <remove_value name="$SendInterceptorLarge"/>
+      <remove_value name="$FleetCommander"/>
+      <remove_value name="$DebugFileName"/>
+      <remove_value name="$DebugDirectory"/>
+
+      <label name="FINISH"/>
+      <wait exact="1ms"/>
+
+    </actions>
+  </attention>
+
+  <on_abort>
+  </on_abort>
+
+</aiscript>

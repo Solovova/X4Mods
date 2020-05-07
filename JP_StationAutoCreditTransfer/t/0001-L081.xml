@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Japanese ~~ 日本語 -->
+<language>
+  <page id="8888888" voice="no">
+    <!-- JP_StationAutoCreditTransfer -->
+    <t id="211">Money transferred to</t>
+    <t id="212">Buildstorage</t>
+  </page>
+</language>

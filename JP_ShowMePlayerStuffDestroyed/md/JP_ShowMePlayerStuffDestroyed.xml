@@ -1,0 +1,146 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<mdscript name="JP_ShowMePlayerStuffDestroyed" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+
+    <cue name="IsOurStuffAttacked" instantiate="true">
+      <conditions>
+        <check_all>
+          <event_player_owned_attacked/>
+          <check_object object="event.object" shiptype="shiptype.smalldrone" negate="true"/>
+          <check_value value="event.object.class" list="[class.ship, class.ship_xs, class.ship_s, class.ship_m, class.ship_l, class.ship_xl, class.station, class.navbeacon, class.satellite, class.turret, class.resourceprobe]"/>
+        </check_all>
+      </conditions>
+      <actions>
+
+        <set_value name="$DEBUG" exact="0.0"/>
+        <set_value name="$DebugDirectory" exact="'JP_ShowMePlayerStuffDestroyed.logs'"/>
+
+        <do_if value="$DEBUG">
+          <debug_to_file append="false" directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'"/>
+          <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_ShowMePlayerStuffDestroyed.xml ~ IsOurStuffAttacked ~~' + '\n'"/>
+        </do_if>
+
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+        <set_value name="$AttackedObject" exact="event.object"/>
+        <set_value name="$Attacker" exact="event.param"/>
+        <set_value name="$KillMethod" exact="event.param2"/>
+
+        <do_if value="$AttackedObject.class == class.navbeacon or $AttackedObject.class == class.satellite or
+                      $AttackedObject.class == class.turret or $AttackedObject.class == class.resourceprobe or
+                      $AttackedObject.class == class.station and $AttackedObject.hullpercentage le 90 or 
+                      $AttackedObject.maxshield gt 0 and $AttackedObject.shieldpercentage le 40 or
+                      $AttackedObject.maxshield == 0 and $AttackedObject.hullpercentage le 90">
+
+          <do_if value="$DEBUG">
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'"/>
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="' ~ $AttackedObject: ' + @$AttackedObject + '[' + @$AttackedObject.idcode + ']'"/>
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="' ~ $Attacker: ' + @$Attacker.knownname + '[' + @$Attacker.idcode + ']'"/>
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="' ~ $KillMethod: ' + $KillMethod"/>
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="' ~ (player.age - @$TimeMessageWasShown) ~ ' + (player.age - @$TimeMessageWasShown) + ' ~ ' + 10s"/>
+            <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'"/>
+          </do_if>
+
+          <do_if value="$AttackedObject != @$LastAttackedObject or ($AttackedObject == @$LastAttackedObject) and (player.age - @$TimeMessageWasShown) gt 10s">
+            <do_if value="$AttackedObject.shieldpercentage gt 20">
+              <!-- Show Message Normal -->
+              <show_help custom="event.object.knownname + '\n' +
+                                 '\033#FFFF6600#' + 'ID_CODE ~ (' + $AttackedObject.idcode + ')' + '\n' +
+                                 {20001, 201} + ': ' + $AttackedObject.sector.knownname + '\n' +
+                                 'is under attack!' + '\n\n' +
+                                 {1001, 2} + ' ~ ' + $AttackedObject.shieldpercentage + '%' + '\n' +
+                                 {1001, 1} + ' ~ ' + $AttackedObject.hullpercentage + '%' + '\033X'"
+                         duration="2s" position="5" allowclose="true"/>
+            </do_if>
+            <do_else>
+              <!-- Show Message Critical -->
+              <show_help custom="event.object.knownname + '\n' +
+                                 '\033#FFFF0000#' + 'ID_CODE ~ (' + $AttackedObject.idcode + ')' + '\n' +
+                                 {20001, 201} + ': ' + $AttackedObject.sector.knownname + '\n' +
+                                 'is under attack!' + '\n\n' +
+                                 {1001, 2} + ' ~ ' + $AttackedObject.shieldpercentage + '%' + '\n' +
+                                 {1001, 1} + ' ~ ' + $AttackedObject.hullpercentage + '%' + '\033X'"
+               duration="2s" position="5" allowclose="true"/>
+            </do_else>
+            <set_value name="$TimeMessageWasShown" exact="player.age"/>
+          </do_if>
+
+          <set_value name="$LastAttackedObject" exact="$AttackedObject"/>
+        </do_if>
+
+        <remove_value name="$KillMethod"/>
+        <remove_value name="$Attacker"/>
+        <remove_value name="$AttackedObject"/>
+
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+        <do_if value="$DEBUG">
+          <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_ShowMePlayerStuffDestroyed.xml ~ IsOurStuffAttacked ~~'"/>
+          <debug_to_file directory="$DebugDirectory" name="'IsOurStuffAttacked.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'"/>
+        </do_if>
+
+        <remove_value name="$DEBUG"/>
+        <remove_value name="$DebugDirectory"/>
+
+      </actions>
+    </cue>
+
+    <cue name="WasAnythingDestroyed" instantiate="true">
+      <conditions>
+        <check_all>
+          <event_player_owned_destroyed/>
+          <check_value value="event.param.class" list="[class.ship, class.ship_xs, class.ship_s, class.ship_m, class.ship_l, class.ship_xl, class.station, class.navbeacon, class.satellite, class.turret, class.resourceprobe]"/>
+        </check_all>
+      </conditions>
+      <actions>
+
+        <set_value name="$DEBUG" exact="0.0"/>
+        <set_value name="$DebugDirectory" exact="'JP_ShowMePlayerStuffDestroyed.logs'"/>
+
+        <do_if value="$DEBUG">
+          <debug_to_file append="false" directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_ShowMePlayerStuffDestroyed.xml ~ WasAnythingDestroyed ~~' + '\n'"/>
+        </do_if>
+
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+        <set_value name="$KilledObject" exact="event.param"/>
+        <set_value name="$KillerObject" exact="event.param2"/>
+        <set_value name="$KillMethod" exact="event.param3"/>
+
+        <do_if value="$DEBUG">
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="' ~ $KilledObject: ' + @$KilledObject + '[' + @$KilledObject.idcode + ']'"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="' ~ $KillerObject: ' + @$KillerObject + '[' + @$KillerObject.idcode + ']'"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="' ~ $KillMethod: ' + $KillMethod"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'"/>
+        </do_if>
+
+        <do_if value="$KillMethod != killmethod.removed and $KillMethod != killmethod.collected and $KilledObject != player.controlled">
+          <show_help custom="event.param.knownname + '\n' +
+                             '\033#FFFF0000#' + 'ID_CODE ~ (' + event.param.idcode + ')' + '\n' +
+                             'was destroyed!\n\n' +
+                             {20001, 201} + ': ' + event.param2.sector.knownname + '\033X'"
+                     duration="6s" log="true" position="8" allowclose="true"/>
+        </do_if>
+
+        <remove_value name="$KillMethod"/>
+        <remove_value name="$KillerObject"/>
+        <remove_value name="$KilledObject"/>
+
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+        <do_if value="$DEBUG">
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'[' + player.systemtime.{'%F - %X'} + '] ' + '~~ JP_ShowMePlayerStuffDestroyed.xml ~ WasAnythingDestroyed ~~'"/>
+          <debug_to_file directory="$DebugDirectory" name="'WasAnythingDestroyed.log'" text="'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'"/>
+        </do_if>
+
+        <remove_value name="$DEBUG"/>
+        <remove_value name="$DebugDirectory"/>
+
+      </actions>
+    </cue>
+
+  </cues>
+</mdscript>

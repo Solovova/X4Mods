@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- French ~~ Français -->
+<language>
+  <page id="8888888" voice="no">
+    <!-- JP_AddTag -->
+    <t id="81">Tag au début?</t>
+    <t id="82">Tag à la fin?</t>
+    <t id="83">Commander?</t>
+    <t id="84">Flotte?</t>
+    <t id="85">Flotte subalterne?</t>
+    <t id="86">Objet avec votre tag</t>
+    <t id="87">Colorier le tag?</t>
+    <t id="88">Colorier le nom?</t>
+    <t id="89">Sauvegarder les noms?</t>
+    <t id="90">Charger les noms?</t>
+    <!-- maybe add more context for this translation -->
+    <t id="91">Supprimer les sauvegardes?</t>
+  </page>
+</language>
+<!-- Thanks to darkslimus / Xchange Guild -->

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- French ~~ Français -->
+<language>
+  <page id="8888888" voice="no">
+    <!-- JP_MultiRename -->
+    <t id="101">Nomenclature de désignation?</t>
+    <t id="102">Ajouter tag de classe?</t>
+    <t id="103">Ajouter nom du type?</t>
+    <t id="104">Utilisé nom de model abrégé?</t>
+    <t id="105">Remove Sentinel Tag?</t>
+    <t id="106">Remove Vanguard Tag?</t>
+    <t id="107">Short Sentinel Tag?</t>
+    <t id="108">Short Vanguard Tag?</t>
+    <t id="109">Utilisé un tag au début?</t>
+    <t id="110">Utilisé un tag à la fin?</t>
+    <t id="111">Objet avec votre tag</t>
+    <t id="112">Utilisé la numérotation?</t>
+    <t id="113">Classé de XL à S?</t>
+    <t id="114">Renommer commandant?</t>
+    <t id="115">Renommer flotte?</t>
+    <t id="116">Renommer le sous. Des flottes?</t>
+    <t id="117">Colorier le tag?</t>
+    <t id="118">Colorier le nom?</t>
+    <t id="119">Colorier le ombre?</t>
+    <t id="120">Enregistrer les noms?</t>
+    <t id="121">Charger les noms?</t>
+    <t id="122">Supprimer enregistré?</t>
+    <t id="123">Réinitialiser</t>
+    <!-- Vanguard -->
+    <t id="125">V*</t>
+    <!-- Sentinel -->
+    <t id="126">S*</t>
+  </page>
+</language>
+<!-- Thanks to darkslimus / Xchange Guild -->
